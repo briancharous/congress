@@ -24,9 +24,10 @@ class VoteRecord(object):
         # .......... | 
         
         # create dictionary to map voter id to row in the matrix
-        # {voter_id: row #}
+        # {voter_id: row #} and vicd versa
         for i in range(len(self.voter_ids_list)):
             self.voter_row_mappings[self.voter_ids_list[i]] = i
+            self.row_voter_mappings[i] = self.voter_ids_list[i]
 
         # dictionary to map bill id to (start) column in the matrix
         # {bill_id: start column #}
@@ -65,6 +66,7 @@ class VoteRecord(object):
         self.voter_ids_list = list(self.voter_ids)
         self.matrix = None    
         self.voter_row_mappings = {}
+        self.row_voter_mappings = {}
         self.bill_col_mappings = {}
 
         self._init_structure()
@@ -106,7 +108,7 @@ class DataManager(object):
                 vote_record[vote_id] = vote
         return vote_record, voters
 
-    def parse_members(self, filename):
+    def parse_members(self, filenames):
         """ read metadata for members of congress """
         Member = namedtuple('Member', ['first_name', 
                                        'last_name', 
@@ -116,26 +118,31 @@ class DataManager(object):
                                        'district',
                                        'gender',
                                        'birthday'])
-        members = []
-        with open(filename, 'r') as f:
-            next(f)
-            reader = csv.reader(f, delimiter=',')
-            for row in reader:
-                birthday = time.strptime(row[2], '%Y-%m-%d')
-                district = row[6]
-                if district != '':
-                    district = int(district)
-                else:
-                    district = None
-                member = Member(first_name = row[1],
-                                last_name = row[0],
-                                party = row[7],
-                                id = int(row[23]),
-                                state = row[5],
-                                district = district,
-                                gender = row[3],
-                                birthday = birthday)
-                members.append(member)
+        members = {}
+        for filename in filenames:
+            with open(filename, 'r') as f:
+                next(f)
+                reader = csv.reader(f, delimiter=',')
+                for row in reader:
+                    if row[2] != '':
+                        birthday = time.strptime(row[2], '%Y-%m-%d')
+                    else:
+                        birthday = None
+                    district = row[6]
+                    if district != '':
+                        district = int(district)
+                    else:
+                        district = None
+                    voter_id = int(row[23])
+                    member = Member(first_name = row[1],
+                                    last_name = row[0],
+                                    party = row[7],
+                                    id = voter_id,
+                                    state = row[5],
+                                    district = district,
+                                    gender = row[3],
+                                    birthday = birthday)
+                    members[voter_id] = member
         return members
 
     def _vote_id(self, attributes):
