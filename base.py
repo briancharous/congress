@@ -1,8 +1,10 @@
 from collections import namedtuple
+import csv
 from enum import Enum
 import json
 import numpy as np
 import os
+import time
 import xml.etree.ElementTree as ET
 
 
@@ -25,7 +27,7 @@ class VoteRecord(object):
         # {voter_id: row #}
         for i in range(len(self.voter_ids_list)):
             self.voter_row_mappings[self.voter_ids_list[i]] = i
-            
+
         # dictionary to map bill id to (start) column in the matrix
         # {bill_id: start column #}
         bill_ids = list(self.record.keys())
@@ -86,7 +88,7 @@ class DataManager(object):
                 vote_id = self._vote_id(root.attrib)
                 for child in root:
                     if child.tag == "voter":
-                        voter_id = child.attrib['id']
+                        voter_id = int(child.attrib['id'])
                         voters.add(voter_id)
                         vote = child.attrib['vote']
                         if vote == '+':
@@ -103,6 +105,38 @@ class DataManager(object):
                             present = present)
                 vote_record[vote_id] = vote
         return vote_record, voters
+
+    def parse_members(self, filename):
+        """ read metadata for members of congress """
+        Member = namedtuple('Member', ['first_name', 
+                                       'last_name', 
+                                       'party',
+                                       'id',
+                                       'state',
+                                       'district',
+                                       'gender',
+                                       'birthday'])
+        members = []
+        with open(filename, 'r') as f:
+            next(f)
+            reader = csv.reader(f, delimiter=',')
+            for row in reader:
+                birthday = time.strptime(row[2], '%Y-%m-%d')
+                district = row[6]
+                if district != '':
+                    district = int(district)
+                else:
+                    district = None
+                member = Member(first_name = row[1],
+                                last_name = row[0],
+                                party = row[7],
+                                id = int(row[23]),
+                                state = row[5],
+                                district = district,
+                                gender = row[3],
+                                birthday = birthday)
+                members.append(member)
+        return members
 
     def _vote_id(self, attributes):
         prefix = ''
@@ -142,6 +176,7 @@ def main():
     d = DataManager()
     votes, ids = d.parse_votes('.', Chamber.house)
     r = VoteRecord(votes, ids)
+    d.parse_members('Data/legislators-current.csv')
 
 if __name__ == '__main__':
     main()
