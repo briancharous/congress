@@ -1,0 +1,6 @@
+bills*
+amendments*
+*.json
+committe*
+fdsys*
+nominations*

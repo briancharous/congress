@@ -24,7 +24,7 @@ class VoteRecord(object):
         # .......... | 
         
         # create dictionary to map voter id to row in the matrix
-        # {voter_id: row #} and vicd versa
+        # {voter_id: row #} and vice versa
         for i in range(len(self.voter_ids_list)):
             self.voter_row_mappings[self.voter_ids_list[i]] = i
             self.row_voter_mappings[i] = self.voter_ids_list[i]
@@ -181,9 +181,12 @@ class DataManager(object):
 
 def main():
     d = DataManager()
-    votes, ids = d.parse_votes('.', Chamber.house)
+    print('reading from file')
+    votes, ids = d.parse_votes('Data', Chamber.house)
+    print('building matrix')
     r = VoteRecord(votes, ids)
-    d.parse_members('Data/legislators-current.csv')
+    print(r.matrix.shape)
+    # d.parse_members('Data/legislators-current.csv')
 
 if __name__ == '__main__':
     main()
