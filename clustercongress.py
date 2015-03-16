@@ -70,7 +70,7 @@ class ClusterCongress(object):
         self.members = dataman.parse_members(metadata_files)
         self.verbose = verbose_output
 
-def cluster_all_congresses(root_dir, chamber_name, verbose, outfile):
+def cluster_all_congresses(root_dir, chamber_name, verbose, outfile, k=2):
     """ cluster all congresses by voting record and determine how partisan each one was """
 
     if str.lower(chamber_name) == 'house':
@@ -81,30 +81,41 @@ def cluster_all_congresses(root_dir, chamber_name, verbose, outfile):
         print('ERROR: {0} is not a valid chamber name. Use either "house" or "senate"'.format(chamber_name))
 
     # directory structure like Data/congress number/votes/year/bill number/data.xml
-    congress_dirs = sorted([int(i) for i in os.listdir(root_dir) if os.path.isdir(os.path.join(root_dir, i))])
-    partisanships = []
-    for directory in congress_dirs:
-        sys.stdout.write('\rClustering Congress {0}'.format(directory))
-        c = ClusterCongress(root_dir+'/'+str(directory), 
+    # handle only wanting to cluster 1 congress
+    if 'votes' in os.listdir(root_dir):
+        c = ClusterCongress(root_dir, 
                             ['Data/legislators-current.csv', 'Data/legislators-historic.csv'], 
                             chamber, verbose)
-        c.cluster(2)
-        partisanships.append((directory, c.check_party_affiliation()))
-    with open(outfile, 'w') as f:
-        writer = csv.writer(f, delimiter=',')
-        for p in partisanships:
-            writer.writerow(p)
-    return partisanships
+        c.cluster(k)
+        partisanship = c.check_party_affiliation()
+        print(partisanship)
+        return partisanship
+    else:
+        congress_dirs = sorted([int(i) for i in os.listdir(root_dir) if os.path.isdir(os.path.join(root_dir, i))])
+        partisanships = []
+        for directory in congress_dirs:
+            sys.stdout.write('\rClustering Congress {0}'.format(directory))
+            c = ClusterCongress(root_dir+'/'+str(directory), 
+                                ['Data/legislators-current.csv', 'Data/legislators-historic.csv'], 
+                                chamber, verbose)
+            c.cluster(k)
+            partisanships.append((directory, c.check_party_affiliation()))
+        with open(outfile, 'w') as f:
+            writer = csv.writer(f, delimiter=',')
+            for p in partisanships:
+                writer.writerow(p)
+        return partisanships
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-c', '--chamber', required = True, help='Chamber of Congress, either "house" or "senate"')
-    parser.add_argument('-d', '--datadir', required = True, help='Data directory with voting records')
-    parser.add_argument('-o', '--outputfile', required = True, help='File in which to save results')
-    parser.add_argument('-v', '--verbose', required = False, action='store_true')
+    parser.add_argument('-c', '--chamber', required = True, help = 'Chamber of Congress, either "house" or "senate"')
+    parser.add_argument('-d', '--datadir', required = True, help = 'Data directory with voting records')
+    parser.add_argument('-o', '--outputfile', required = True, help = 'File in which to save results')
+    parser.add_argument('-v', '--verbose', required = False, action = 'store_true')
+    parser.add_argument('-k', '--num_clusters', required = True, help = 'number of clusters into which to place congress')
     args = parser.parse_args()
 
-    cluster_all_congresses(args.datadir, args.chamber, args.verbose, args.outputfile)
+    cluster_all_congresses(args.datadir, args.chamber, args.verbose, args.outputfile, int(args.num_clusters))
 
     # c = ClusterCongress('Data', ['Data/legislators-current.csv', 'Data/legislators-historic.csv'], Chamber.senate)
     # c.cluster(2)
